@@ -1,0 +1,350 @@
+import { useState, useMemo } from 'react';
+import { ClassCard } from './components/ClassCard';
+import { TaskList } from './components/TaskList';
+import { ProgressBar } from './components/ProgressBar';
+import { ClassDetailPage } from './components/ClassDetailPage';
+import { ArrowLeft } from 'lucide-react';
+
+interface Note {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface PracticeExam {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+  dueToday: boolean;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  examDate: string;
+  color: string;
+  tasks: Task[];
+  notes: Note[];
+  practiceExams: PracticeExam[];
+  notesUrl?: string;
+  examsUrl?: string;
+}
+
+export default function App() {
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
+  const [classes, setClasses] = useState<Class[]>([
+    {
+      id: '1',
+      name: 'ESC101H1',
+      examDate: 'Dec 5',
+      color: '#E57373',
+      notesUrl: 'https://q.utoronto.ca/courses/411081/modules',
+      examsUrl: 'https://courses.skule.ca/course/ESC101H1#63',
+      tasks: [
+        { id: 'c1-1', text: 'Review lecture summaries', completed: false, dueToday: true },
+        { id: 'c1-2', text: 'Practice old exam problems', completed: false, dueToday: true },
+      ],
+      notes: Array.from({ length: 35 }, (_, i) => ({
+        id: `c1-n${i + 1}`,
+        title: `Lecture ${i + 1}`,
+        completed: false,
+      })),
+      practiceExams: [
+        { id: 'c1-e1', title: 'Practice Exam 1', completed: false },
+        { id: 'c1-e2', title: 'Practice Exam 2', completed: false },
+        { id: 'c1-e3', title: 'Practice Exam 3', completed: false },
+      ],
+    },
+    {
+      id: '2',
+      name: 'PHY180H1',
+      examDate: 'Dec 8',
+      color: '#64B5F6',
+      notesUrl: 'https://q.utoronto.ca/courses/411727/modules',
+      examsUrl: 'https://courses.skule.ca/api/exam/exams/bulk/20229/PHY180F_2022_FOUNDATIONS%20OF%20PHYSICS_E.pdf',
+      tasks: [
+        { id: 'c2-1', text: 'Review key formulas', completed: false, dueToday: false },
+        { id: 'c2-2', text: 'Work through example problems', completed: false, dueToday: true },
+      ],
+      notes: Array.from({ length: 40 }, (_, i) => ({
+        id: `c2-n${i + 1}`,
+        title: `Class ${i + 1}`,
+        completed: false,
+      })),
+      practiceExams: [
+        { id: 'c2-e1', title: 'Practice Exam 1', completed: false },
+        { id: 'c2-e2', title: 'Practice Exam 2', completed: false },
+      ],
+    },
+    {
+      id: '3',
+      name: 'ESC103H1',
+      examDate: 'Dec 10',
+      color: '#FFD54F',
+      notesUrl: 'https://utoronto-my.sharepoint.com/personal/arthurwh_chan_utoronto_ca/_layouts/15/Doc.aspx?sourcedoc={0233b3bd-a7a3-47af-93e1-b7aaee161dc4}&action=view&wd=target%28_Content%20Library%2FLecture%20Notes.one%7C56c400db-6a6c-4795-aaa6-d446a4dec196%2FUnit%201%20Review%20of%20vectors%7Cf88f82fa-7b2f-4c6a-828d-1654b414a48e%2F%29&wdorigin=NavigationUrl',
+      examsUrl: 'https://courses.skule.ca/course/ESC103H1#63',
+      tasks: [
+        { id: 'c3-1', text: 'Review vector operations', completed: false, dueToday: false },
+        { id: 'c3-2', text: 'Practice unit conversions', completed: false, dueToday: true },
+      ],
+      notes: Array.from({ length: 25 }, (_, i) => ({
+        id: `c3-n${i + 1}`,
+        title: `Unit ${i + 1}`,
+        completed: false,
+      })),
+      practiceExams: [
+        { id: 'c3-e1', title: 'Practice Exam 1', completed: false },
+        { id: 'c3-e2', title: 'Practice Exam 2', completed: false },
+        { id: 'c3-e3', title: 'Practice Exam 3', completed: false },
+        { id: 'c3-e4', title: 'Practice Exam 4', completed: false },
+      ],
+    },
+    {
+      id: '4',
+      name: 'ESC194H1',
+      examDate: 'Dec 12',
+      color: '#BA68C8',
+      examsUrl: 'https://courses.skule.ca/course/MAT194H1#63',
+      tasks: [
+        { id: 'c4-1', text: 'Finish remaining problem sets', completed: false, dueToday: true },
+        { id: 'c4-2', text: 'Review derivatives and integrals', completed: false, dueToday: false },
+      ],
+      notes: [
+        { id: 'c4-n1', title: 'Stewart 1.4 + Appendix D (Trig)', completed: false },
+        { id: 'c4-n2', title: 'Barbeau-Stangeby Supplement 1, 2.1-2.7', completed: false },
+        { id: 'c4-n3', title: 'Stewart 1.5 + Problems 1.1-1.3', completed: false },
+        { id: 'c4-n4', title: 'Stewart 1.6-1.8 + Supplement 2.8, 3.1-3.4, 4.1', completed: false },
+        { id: 'c4-n5', title: 'Stewart 2.1-2.7 (Limits)', completed: false },
+        { id: 'c4-n6', title: 'Stewart 2.8-2.9 + Supplement 4.2-4.3', completed: false },
+        { id: 'c4-n7', title: 'Stewart 3.1-3.4 (Derivatives)', completed: false },
+        { id: 'c4-n8', title: 'Stewart 3.5, 3.7, 3.9, 4.1 + Appendix E', completed: false },
+        { id: 'c4-n9', title: 'Stewart 4.2-4.3 (Applications)', completed: false },
+        { id: 'c4-n10', title: 'Stewart 4.4-4.5, 5.1-5.2 (Optimization & Integrals)', completed: false },
+        { id: 'c4-n11', title: 'Stewart 5.3, 5.5, 6.1, 6.2* (Integration)', completed: false },
+        { id: 'c4-n12', title: 'Stewart 6.3*-6.4* (Applications of Integration)', completed: false },
+        { id: 'c4-n13', title: 'Stewart 6.6 (Inverse Functions)', completed: false },
+        { id: 'c4-n14', title: 'Stewart 6.8, 9.1, 9.3, 6.5, 9.4 (Differential Equations)', completed: false },
+        { id: 'c4-n15', title: 'Stewart 9.5, 17.1 + Complex Numbers', completed: false },
+        { id: 'c4-n16', title: 'Stewart 17.2 (Vector Calculus)', completed: false },
+      ],
+      practiceExams: Array.from({ length: 10 }, (_, i) => ({
+        id: `c4-e${i + 1}`,
+        title: `Practice Exam ${i + 1}`,
+        completed: false,
+      })),
+    },
+    {
+      id: '5',
+      name: 'ESC180H1',
+      examDate: 'Dec 16',
+      color: '#4DB6AC',
+      examsUrl: 'https://www.cs.toronto.edu/~guerzhoy/180/',
+      tasks: [
+        { id: 'c5-1', text: 'Review Python syntax and concepts', completed: false, dueToday: true },
+        { id: 'c5-2', text: 'Practice coding problems', completed: false, dueToday: false },
+        { id: 'c5-3', text: 'Review data structures', completed: false, dueToday: false },
+      ],
+      notes: [],
+      practiceExams: Array.from({ length: 6 }, (_, i) => ({
+        id: `c5-e${i + 1}`,
+        title: `Practice Exam ${i + 1}`,
+        completed: false,
+      })),
+    },
+    {
+      id: '6',
+      name: 'CIV102H1',
+      examDate: 'Dec 19',
+      color: '#FF8A65',
+      notesUrl: 'https://courses.skule.ca/course/CIV102H1#66',
+      examsUrl: 'https://courses.skule.ca/course/CIV102H1#63',
+      tasks: [
+        { id: 'c6-1', text: 'Review structural analysis methods', completed: false, dueToday: false },
+        { id: 'c6-2', text: 'Practice bridge design calculations', completed: false, dueToday: false },
+      ],
+      notes: Array.from({ length: 35 }, (_, i) => ({
+        id: `c6-n${i + 1}`,
+        title: `Lecture ${i + 1}`,
+        completed: false,
+      })),
+      practiceExams: Array.from({ length: 10 }, (_, i) => ({
+        id: `c6-e${i + 1}`,
+        title: `Practice Exam ${i + 1}`,
+        completed: false,
+      })),
+    },
+  ]);
+
+  // Calculate certainty based on all completed items
+  const certainty = useMemo(() => {
+    let totalItems = 0;
+    let completedItems = 0;
+
+    classes.forEach((cls) => {
+      // Count tasks
+      totalItems += cls.tasks.length;
+      completedItems += cls.tasks.filter((t) => t.completed).length;
+
+      // Count notes
+      totalItems += cls.notes.length;
+      completedItems += cls.notes.filter((n) => n.completed).length;
+
+      // Count practice exams
+      totalItems += cls.practiceExams.length;
+      completedItems += cls.practiceExams.filter((e) => e.completed).length;
+    });
+
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  }, [classes]);
+
+  // Get today's tasks from all classes
+  const todayTasks = useMemo(() => {
+    const tasks: Array<Task & { classId: string; className: string; color: string }> = [];
+    classes.forEach((cls) => {
+      cls.tasks.forEach((task) => {
+        if (task.dueToday) {
+          tasks.push({
+            ...task,
+            classId: cls.id,
+            className: cls.name,
+            color: cls.color,
+          });
+        }
+      });
+    });
+    return tasks;
+  }, [classes]);
+
+  // Calculate progress for each class
+  const getClassProgress = (cls: Class) => {
+    const totalItems = cls.tasks.length + cls.notes.length + cls.practiceExams.length;
+    const completedItems =
+      cls.tasks.filter((t) => t.completed).length +
+      cls.notes.filter((n) => n.completed).length +
+      cls.practiceExams.filter((e) => e.completed).length;
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  };
+
+  const toggleTodayTask = (taskId: string) => {
+    setClasses((prevClasses) =>
+      prevClasses.map((cls) => ({
+        ...cls,
+        tasks: cls.tasks.map((task) =>
+          task.id === taskId ? { ...task, completed: !task.completed } : task
+        ),
+      }))
+    );
+  };
+
+  const updateClass = (updatedClass: Class) => {
+    setClasses((prevClasses) =>
+      prevClasses.map((cls) => (cls.id === updatedClass.id ? updatedClass : cls))
+    );
+  };
+
+  const selectedClass = classes.find((cls) => cls.id === selectedClassId);
+
+  if (selectedClass) {
+    return (
+      <ClassDetailPage
+        classData={selectedClass}
+        onBack={() => setSelectedClassId(null)}
+        onUpdate={updateClass}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FFFEF7] p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Title */}
+        <h1 className="text-center mb-12 sketch-title">Exam Prep Tracker</h1>
+
+        {/* Certainty Section */}
+        <div className="mb-12 sketch-box">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="sketch-heading">Certainty</h2>
+            <span className="sketch-text">{certainty}%</span>
+          </div>
+          <ProgressBar progress={certainty} color="#4CAF50" />
+        </div>
+
+        {/* Tasks for Today */}
+        <div className="mb-12 sketch-box">
+          <h2 className="sketch-heading mb-4">Tasks for Today</h2>
+          {todayTasks.length === 0 ? (
+            <p className="sketch-text opacity-60">No tasks due today! 🎉</p>
+          ) : (
+            <div className="space-y-3">
+              {todayTasks.map((task) => (
+                <div key={task.id} className="flex items-start gap-3">
+                  <button
+                    onClick={() => toggleTodayTask(task.id)}
+                    className="mt-1 sketch-checkbox"
+                    style={{
+                      backgroundColor: task.completed ? '#4CAF50' : 'transparent',
+                    }}
+                  >
+                    {task.completed && (
+                      <svg
+                        width="12"
+                        height="10"
+                        viewBox="0 0 12 10"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 5L4.5 8.5L11 1"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                  <div className="flex-1">
+                    <span
+                      className="sketch-text"
+                      style={{
+                        textDecoration: task.completed ? 'line-through' : 'none',
+                        opacity: task.completed ? 0.6 : 1,
+                      }}
+                    >
+                      {task.text}
+                    </span>
+                    <span
+                      className="sketch-text ml-2 opacity-75"
+                      style={{ color: task.color }}
+                    >
+                      • {task.className}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Classes */}
+        <div className="grid grid-cols-2 gap-4">
+          {classes.map((cls) => (
+            <ClassCard
+              key={cls.id}
+              classData={cls}
+              progress={getClassProgress(cls)}
+              onClassClick={() => setSelectedClassId(cls.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
