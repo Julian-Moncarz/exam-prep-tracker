@@ -36,6 +36,175 @@ interface Class {
   examsUrl?: string;
 }
 
+// localStorage key for persisting app data
+const STORAGE_KEY = 'exam-prep-tracker-data';
+
+// Default classes data (used when no saved data exists)
+const DEFAULT_CLASSES: Class[] = [
+  {
+    id: '1',
+    name: 'ESC101H1',
+    examDate: 'Dec 5',
+    color: '#E57373',
+    notesUrl: 'https://q.utoronto.ca/courses/411081/modules',
+    examsUrl: 'https://courses.skule.ca/course/ESC101H1#63',
+    tasks: [
+      { id: 'c1-1', text: 'Review lecture summaries', completed: false },
+      { id: 'c1-2', text: 'Practice old exam problems', completed: false },
+    ],
+    notes: Array.from({ length: 35 }, (_, i) => ({
+      id: `c1-n${i + 1}`,
+      title: `Lecture ${i + 1}`,
+      completed: false,
+    })),
+    practiceExams: [
+      { id: 'c1-e1', title: 'Practice Exam 1', completed: false },
+      { id: 'c1-e2', title: 'Practice Exam 2', completed: false },
+      { id: 'c1-e3', title: 'Practice Exam 3', completed: false },
+    ],
+  },
+  {
+    id: '2',
+    name: 'PHY180H1',
+    examDate: 'Dec 8',
+    color: '#64B5F6',
+    notesUrl: 'https://q.utoronto.ca/courses/411727/modules',
+    examsUrl: 'https://courses.skule.ca/api/exam/exams/bulk/20229/PHY180F_2022_FOUNDATIONS%20OF%20PHYSICS_E.pdf',
+    tasks: [
+      { id: 'c2-1', text: 'Review key formulas', completed: false },
+      { id: 'c2-2', text: 'Work through example problems', completed: false },
+    ],
+    notes: Array.from({ length: 40 }, (_, i) => ({
+      id: `c2-n${i + 1}`,
+      title: `Class ${i + 1}`,
+      completed: false,
+    })),
+    practiceExams: [
+      { id: 'c2-e1', title: 'Practice Exam 1', completed: false },
+      { id: 'c2-e2', title: 'Practice Exam 2', completed: false },
+    ],
+  },
+  {
+    id: '3',
+    name: 'ESC103H1',
+    examDate: 'Dec 10',
+    color: '#FFD54F',
+    notesUrl: 'https://utoronto-my.sharepoint.com/personal/arthurwh_chan_utoronto_ca/_layouts/15/Doc.aspx?sourcedoc={0233b3bd-a7a3-47af-93e1-b7aaee161dc4}&action=view&wd=target%28_Content%20Library%2FLecture%20Notes.one%7C56c400db-6a6c-4795-aaa6-d446a4dec196%2FUnit%201%20Review%20of%20vectors%7Cf88f82fa-7b2f-4c6a-828d-1654b414a48e%2F%29&wdorigin=NavigationUrl',
+    examsUrl: 'https://courses.skule.ca/course/ESC103H1#63',
+    tasks: [
+      { id: 'c3-1', text: 'Review vector operations', completed: false },
+      { id: 'c3-2', text: 'Practice unit conversions', completed: false },
+    ],
+    notes: Array.from({ length: 25 }, (_, i) => ({
+      id: `c3-n${i + 1}`,
+      title: `Unit ${i + 1}`,
+      completed: false,
+    })),
+    practiceExams: [
+      { id: 'c3-e1', title: 'Practice Exam 1', completed: false },
+      { id: 'c3-e2', title: 'Practice Exam 2', completed: false },
+      { id: 'c3-e3', title: 'Practice Exam 3', completed: false },
+      { id: 'c3-e4', title: 'Practice Exam 4', completed: false },
+    ],
+  },
+  {
+    id: '4',
+    name: 'ESC194H1',
+    examDate: 'Dec 12',
+    color: '#BA68C8',
+    examsUrl: 'https://courses.skule.ca/course/MAT194H1#63',
+    tasks: [
+      { id: 'c4-1', text: 'Finish remaining problem sets', completed: false },
+      { id: 'c4-2', text: 'Review derivatives and integrals', completed: false },
+    ],
+    notes: [
+      { id: 'c4-n1', title: 'Stewart 1.4 + Appendix D (Trig)', completed: false },
+      { id: 'c4-n2', title: 'Barbeau-Stangeby Supplement 1, 2.1-2.7', completed: false },
+      { id: 'c4-n3', title: 'Stewart 1.5 + Problems 1.1-1.3', completed: false },
+      { id: 'c4-n4', title: 'Stewart 1.6-1.8 + Supplement 2.8, 3.1-3.4, 4.1', completed: false },
+      { id: 'c4-n5', title: 'Stewart 2.1-2.7 (Limits)', completed: false },
+      { id: 'c4-n6', title: 'Stewart 2.8-2.9 + Supplement 4.2-4.3', completed: false },
+      { id: 'c4-n7', title: 'Stewart 3.1-3.4 (Derivatives)', completed: false },
+      { id: 'c4-n8', title: 'Stewart 3.5, 3.7, 3.9, 4.1 + Appendix E', completed: false },
+      { id: 'c4-n9', title: 'Stewart 4.2-4.3 (Applications)', completed: false },
+      { id: 'c4-n10', title: 'Stewart 4.4-4.5, 5.1-5.2 (Optimization & Integrals)', completed: false },
+      { id: 'c4-n11', title: 'Stewart 5.3, 5.5, 6.1, 6.2* (Integration)', completed: false },
+      { id: 'c4-n12', title: 'Stewart 6.3*-6.4* (Applications of Integration)', completed: false },
+      { id: 'c4-n13', title: 'Stewart 6.6 (Inverse Functions)', completed: false },
+      { id: 'c4-n14', title: 'Stewart 6.8, 9.1, 9.3, 6.5, 9.4 (Differential Equations)', completed: false },
+      { id: 'c4-n15', title: 'Stewart 9.5, 17.1 + Complex Numbers', completed: false },
+      { id: 'c4-n16', title: 'Stewart 17.2 (Vector Calculus)', completed: false },
+    ],
+    practiceExams: Array.from({ length: 10 }, (_, i) => ({
+      id: `c4-e${i + 1}`,
+      title: `Practice Exam ${i + 1}`,
+      completed: false,
+    })),
+  },
+  {
+    id: '5',
+    name: 'ESC180H1',
+    examDate: 'Dec 16',
+    color: '#4DB6AC',
+    examsUrl: 'https://www.cs.toronto.edu/~guerzhoy/180/',
+    tasks: [
+      { id: 'c5-1', text: 'Review Python syntax and concepts', completed: false },
+      { id: 'c5-2', text: 'Practice coding problems', completed: false },
+      { id: 'c5-3', text: 'Review data structures', completed: false },
+    ],
+    notes: [],
+    practiceExams: Array.from({ length: 6 }, (_, i) => ({
+      id: `c5-e${i + 1}`,
+      title: `Practice Exam ${i + 1}`,
+      completed: false,
+    })),
+  },
+  {
+    id: '6',
+    name: 'CIV102H1',
+    examDate: 'Dec 19',
+    color: '#FF8A65',
+    notesUrl: 'https://courses.skule.ca/course/CIV102H1#66',
+    examsUrl: 'https://courses.skule.ca/course/CIV102H1#63',
+    tasks: [
+      { id: 'c6-1', text: 'Review structural analysis methods', completed: false },
+      { id: 'c6-2', text: 'Practice bridge design calculations', completed: false },
+    ],
+    notes: Array.from({ length: 35 }, (_, i) => ({
+      id: `c6-n${i + 1}`,
+      title: `Lecture ${i + 1}`,
+      completed: false,
+    })),
+    practiceExams: Array.from({ length: 10 }, (_, i) => ({
+      id: `c6-e${i + 1}`,
+      title: `Practice Exam ${i + 1}`,
+      completed: false,
+    })),
+  },
+];
+
+// Load classes from localStorage, or return defaults if none exist
+function loadFromLocalStorage(): Class[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error('Failed to load data from localStorage:', error);
+  }
+  return DEFAULT_CLASSES;
+}
+
+// Save classes to localStorage
+function saveToLocalStorage(classes: Class[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(classes));
+  } catch (error) {
+    console.error('Failed to save data to localStorage:', error);
+  }
+}
+
 // Helper to parse exam date strings like "Dec 5" into Date objects
 function parseExamDate(dateStr: string): Date {
   const currentYear = new Date().getFullYear();
@@ -130,149 +299,12 @@ function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; 
 
 export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [classes, setClasses] = useState<Class[]>(loadFromLocalStorage);
 
-  const [classes, setClasses] = useState<Class[]>([
-    {
-      id: '1',
-      name: 'ESC101H1',
-      examDate: 'Dec 5',
-      color: '#E57373',
-      notesUrl: 'https://q.utoronto.ca/courses/411081/modules',
-      examsUrl: 'https://courses.skule.ca/course/ESC101H1#63',
-      tasks: [
-        { id: 'c1-1', text: 'Review lecture summaries', completed: false },
-        { id: 'c1-2', text: 'Practice old exam problems', completed: false },
-      ],
-      notes: Array.from({ length: 35 }, (_, i) => ({
-        id: `c1-n${i + 1}`,
-        title: `Lecture ${i + 1}`,
-        completed: false,
-      })),
-      practiceExams: [
-        { id: 'c1-e1', title: 'Practice Exam 1', completed: false },
-        { id: 'c1-e2', title: 'Practice Exam 2', completed: false },
-        { id: 'c1-e3', title: 'Practice Exam 3', completed: false },
-      ],
-    },
-    {
-      id: '2',
-      name: 'PHY180H1',
-      examDate: 'Dec 8',
-      color: '#64B5F6',
-      notesUrl: 'https://q.utoronto.ca/courses/411727/modules',
-      examsUrl: 'https://courses.skule.ca/api/exam/exams/bulk/20229/PHY180F_2022_FOUNDATIONS%20OF%20PHYSICS_E.pdf',
-      tasks: [
-        { id: 'c2-1', text: 'Review key formulas', completed: false },
-        { id: 'c2-2', text: 'Work through example problems', completed: false },
-      ],
-      notes: Array.from({ length: 40 }, (_, i) => ({
-        id: `c2-n${i + 1}`,
-        title: `Class ${i + 1}`,
-        completed: false,
-      })),
-      practiceExams: [
-        { id: 'c2-e1', title: 'Practice Exam 1', completed: false },
-        { id: 'c2-e2', title: 'Practice Exam 2', completed: false },
-      ],
-    },
-    {
-      id: '3',
-      name: 'ESC103H1',
-      examDate: 'Dec 10',
-      color: '#FFD54F',
-      notesUrl: 'https://utoronto-my.sharepoint.com/personal/arthurwh_chan_utoronto_ca/_layouts/15/Doc.aspx?sourcedoc={0233b3bd-a7a3-47af-93e1-b7aaee161dc4}&action=view&wd=target%28_Content%20Library%2FLecture%20Notes.one%7C56c400db-6a6c-4795-aaa6-d446a4dec196%2FUnit%201%20Review%20of%20vectors%7Cf88f82fa-7b2f-4c6a-828d-1654b414a48e%2F%29&wdorigin=NavigationUrl',
-      examsUrl: 'https://courses.skule.ca/course/ESC103H1#63',
-      tasks: [
-        { id: 'c3-1', text: 'Review vector operations', completed: false },
-        { id: 'c3-2', text: 'Practice unit conversions', completed: false },
-      ],
-      notes: Array.from({ length: 25 }, (_, i) => ({
-        id: `c3-n${i + 1}`,
-        title: `Unit ${i + 1}`,
-        completed: false,
-      })),
-      practiceExams: [
-        { id: 'c3-e1', title: 'Practice Exam 1', completed: false },
-        { id: 'c3-e2', title: 'Practice Exam 2', completed: false },
-        { id: 'c3-e3', title: 'Practice Exam 3', completed: false },
-        { id: 'c3-e4', title: 'Practice Exam 4', completed: false },
-      ],
-    },
-    {
-      id: '4',
-      name: 'ESC194H1',
-      examDate: 'Dec 12',
-      color: '#BA68C8',
-      examsUrl: 'https://courses.skule.ca/course/MAT194H1#63',
-      tasks: [
-        { id: 'c4-1', text: 'Finish remaining problem sets', completed: false },
-        { id: 'c4-2', text: 'Review derivatives and integrals', completed: false },
-      ],
-      notes: [
-        { id: 'c4-n1', title: 'Stewart 1.4 + Appendix D (Trig)', completed: false },
-        { id: 'c4-n2', title: 'Barbeau-Stangeby Supplement 1, 2.1-2.7', completed: false },
-        { id: 'c4-n3', title: 'Stewart 1.5 + Problems 1.1-1.3', completed: false },
-        { id: 'c4-n4', title: 'Stewart 1.6-1.8 + Supplement 2.8, 3.1-3.4, 4.1', completed: false },
-        { id: 'c4-n5', title: 'Stewart 2.1-2.7 (Limits)', completed: false },
-        { id: 'c4-n6', title: 'Stewart 2.8-2.9 + Supplement 4.2-4.3', completed: false },
-        { id: 'c4-n7', title: 'Stewart 3.1-3.4 (Derivatives)', completed: false },
-        { id: 'c4-n8', title: 'Stewart 3.5, 3.7, 3.9, 4.1 + Appendix E', completed: false },
-        { id: 'c4-n9', title: 'Stewart 4.2-4.3 (Applications)', completed: false },
-        { id: 'c4-n10', title: 'Stewart 4.4-4.5, 5.1-5.2 (Optimization & Integrals)', completed: false },
-        { id: 'c4-n11', title: 'Stewart 5.3, 5.5, 6.1, 6.2* (Integration)', completed: false },
-        { id: 'c4-n12', title: 'Stewart 6.3*-6.4* (Applications of Integration)', completed: false },
-        { id: 'c4-n13', title: 'Stewart 6.6 (Inverse Functions)', completed: false },
-        { id: 'c4-n14', title: 'Stewart 6.8, 9.1, 9.3, 6.5, 9.4 (Differential Equations)', completed: false },
-        { id: 'c4-n15', title: 'Stewart 9.5, 17.1 + Complex Numbers', completed: false },
-        { id: 'c4-n16', title: 'Stewart 17.2 (Vector Calculus)', completed: false },
-      ],
-      practiceExams: Array.from({ length: 10 }, (_, i) => ({
-        id: `c4-e${i + 1}`,
-        title: `Practice Exam ${i + 1}`,
-        completed: false,
-      })),
-    },
-    {
-      id: '5',
-      name: 'ESC180H1',
-      examDate: 'Dec 16',
-      color: '#4DB6AC',
-      examsUrl: 'https://www.cs.toronto.edu/~guerzhoy/180/',
-      tasks: [
-        { id: 'c5-1', text: 'Review Python syntax and concepts', completed: false },
-        { id: 'c5-2', text: 'Practice coding problems', completed: false },
-        { id: 'c5-3', text: 'Review data structures', completed: false },
-      ],
-      notes: [],
-      practiceExams: Array.from({ length: 6 }, (_, i) => ({
-        id: `c5-e${i + 1}`,
-        title: `Practice Exam ${i + 1}`,
-        completed: false,
-      })),
-    },
-    {
-      id: '6',
-      name: 'CIV102H1',
-      examDate: 'Dec 19',
-      color: '#FF8A65',
-      notesUrl: 'https://courses.skule.ca/course/CIV102H1#66',
-      examsUrl: 'https://courses.skule.ca/course/CIV102H1#63',
-      tasks: [
-        { id: 'c6-1', text: 'Review structural analysis methods', completed: false },
-        { id: 'c6-2', text: 'Practice bridge design calculations', completed: false },
-      ],
-      notes: Array.from({ length: 35 }, (_, i) => ({
-        id: `c6-n${i + 1}`,
-        title: `Lecture ${i + 1}`,
-        completed: false,
-      })),
-      practiceExams: Array.from({ length: 10 }, (_, i) => ({
-        id: `c6-e${i + 1}`,
-        title: `Practice Exam ${i + 1}`,
-        completed: false,
-      })),
-    },
-  ]);
+  // Auto-save to localStorage whenever classes state changes
+  useEffect(() => {
+    saveToLocalStorage(classes);
+  }, [classes]);
 
   // Calculate certainty based on all completed items
   const certainty = useMemo(() => {
