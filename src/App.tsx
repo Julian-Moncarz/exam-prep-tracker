@@ -487,9 +487,15 @@ export default function App() {
       }))
     );
 
-    // If we found the task and it's being marked complete (not already completed), add to completedToday
-    if (taskBeingToggled && !taskBeingToggled.completed) {
-      setCompletedToday(prev => [...prev, taskBeingToggled]);
+    // Handle adding/removing from completedToday
+    if (taskBeingToggled) {
+      if (!taskBeingToggled.completed) {
+        // Task is being marked complete - add to completedToday
+        setCompletedToday(prev => [...prev, taskBeingToggled]);
+      } else {
+        // Task is being unmarked - remove from completedToday
+        setCompletedToday(prev => prev.filter(t => t.id !== taskId));
+      }
     }
   };
 
@@ -537,20 +543,20 @@ export default function App() {
                 <div
                   className="sketch-progress-fill h-full flex items-center justify-center"
                   style={{
-                    width: `${completedToday.length > 0 ? (completedToday.length / (todayTasks.length + completedToday.length)) * 100 : 0}%`,
+                    width: `${completedToday.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0}%`,
                     background: 'linear-gradient(90deg, hsl(0, 70%, 60%) 0%, hsl(30, 70%, 60%) 20%, hsl(60, 70%, 60%) 35%, hsl(120, 70%, 60%) 50%, hsl(180, 70%, 60%) 65%, hsl(240, 70%, 60%) 80%, hsl(280, 70%, 60%) 90%, hsl(320, 70%, 60%) 100%)',
                     transition: 'width 0.5s ease'
                   }}
                 >
                   {completedToday.length > 0 && (
                     <span className="sketch-text-small font-bold text-white relative z-10">
-                      {completedToday.length}/{todayTasks.length + completedToday.length}
+                      {completedToday.length}/{todayTasks.length}
                     </span>
                   )}
                 </div>
               </div>
               <p className="sketch-text-small text-center opacity-75">
-                {completedToday.length} of {todayTasks.length + completedToday.length} tasks completed
+                {completedToday.length} of {todayTasks.length} tasks completed
               </p>
             </div>
           )}
