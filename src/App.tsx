@@ -256,9 +256,9 @@ function parseExamDate(dateStr: string): Date {
 }
 
 // Scheduling algorithm: calculates which tasks should be done today
-function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }> {
+function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string; notesUrl?: string; examsUrl?: string }> {
   const today = startOfDay(new Date());
-  const scheduledTasks: Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }> = [];
+  const scheduledTasks: Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string; notesUrl?: string; examsUrl?: string }> = [];
 
   classes.forEach((cls) => {
     const examDate = parseExamDate(cls.examDate);
@@ -314,7 +314,7 @@ function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; 
       if (remainingWorkload <= 0) break;
 
       // Convert Note or PracticeExam to Task format for display
-      const taskItem: Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string } = {
+      const taskItem: Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string; notesUrl?: string; examsUrl?: string } = {
         id: item.id,
         text: type === 'task' ? (item as Task).text : item.title,
         completed: item.completed,
@@ -323,6 +323,8 @@ function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; 
         color: cls.color,
         type: type,
         itemTitle: type !== 'task' ? item.title : undefined,
+        notesUrl: cls.notesUrl,
+        examsUrl: cls.examsUrl,
       };
 
       scheduledTasks.push(taskItem);
@@ -390,7 +392,7 @@ export default function App() {
   });
 
   // Track completed tasks for today (persists across reloads)
-  const [completedToday, setCompletedToday] = useState<Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }>>([]);
+  const [completedToday, setCompletedToday] = useState<Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string; notesUrl?: string; examsUrl?: string }>>([]);
 
   // Restore completedToday from localStorage on mount
   useEffect(() => {
@@ -594,21 +596,52 @@ export default function App() {
                     )}
                   </button>
                   <div className="flex-1">
-                    <span
-                      className="sketch-text"
-                      style={{
-                        textDecoration: task.completed ? 'line-through' : 'none',
-                        opacity: task.completed ? 0.6 : 1,
-                      }}
-                    >
-                      {task.text}
-                    </span>
-                    <span
-                      className="sketch-text ml-2 opacity-75"
+                    {/* Task name - clickable if it's a note or exam with a URL */}
+                    {task.type === 'note' && task.notesUrl ? (
+                      <a
+                        href={task.notesUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="sketch-text cursor-pointer"
+                        style={{
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          opacity: task.completed ? 0.6 : 1,
+                        }}
+                      >
+                        {task.text}
+                      </a>
+                    ) : task.type === 'exam' && task.examsUrl ? (
+                      <a
+                        href={task.examsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="sketch-text cursor-pointer"
+                        style={{
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          opacity: task.completed ? 0.6 : 1,
+                        }}
+                      >
+                        {task.text}
+                      </a>
+                    ) : (
+                      <span
+                        className="sketch-text"
+                        style={{
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          opacity: task.completed ? 0.6 : 1,
+                        }}
+                      >
+                        {task.text}
+                      </span>
+                    )}
+                    {/* Class name - always clickable, navigates to class detail page */}
+                    <button
+                      onClick={() => setSelectedClassId(task.classId)}
+                      className="sketch-text ml-2 opacity-75 cursor-pointer"
                       style={{ color: task.color }}
                     >
                       • {task.className}
-                    </span>
+                    </button>
                   </div>
                 </div>
               ))}
