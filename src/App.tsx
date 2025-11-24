@@ -300,6 +300,9 @@ function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; 
 export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [classes, setClasses] = useState<Class[]>(loadFromLocalStorage);
+  // Track completed tasks for the current session (resets on app restart)
+  const [completedToday, setCompletedToday] = useState<Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }>>([]);
+  const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
 
   // Auto-save to localStorage whenever classes state changes
   useEffect(() => {
@@ -329,9 +332,51 @@ export default function App() {
   }, [classes]);
 
   // Get today's tasks using the weighted workload scheduling algorithm
+  // Snapshot approach: lock in the tasks at the start of each day
+  const [todayTasksSnapshot, setTodayTasksSnapshot] = useState<{
+    date: string;
+    tasks: any[];
+  }>(() => {
+    const today = startOfDay(new Date()).toISOString();
+    return {
+      date: today,
+      tasks: calculateTodayTasks(classes)
+    };
+  });
+
+  // Recalculate todayTasks only when the date changes, not when tasks are completed
+  useEffect(() => {
+    const today = startOfDay(new Date()).toISOString();
+    if (todayTasksSnapshot.date !== today) {
+      setTodayTasksSnapshot({
+        date: today,
+        tasks: calculateTodayTasks(classes)
+      });
+    }
+  }, [classes, todayTasksSnapshot.date]);
+
+  // Sync completion status from classes to the snapshot
+  // This keeps the checked/unchecked state in sync without recalculating the list
   const todayTasks = useMemo(() => {
-    return calculateTodayTasks(classes);
-  }, [classes]);
+    return todayTasksSnapshot.tasks.map((snapshotTask: any) => {
+      // Find the current class
+      const cls = classes.find((c: Class) => c.id === snapshotTask.classId);
+      if (!cls) return snapshotTask;
+
+      // Find the actual item in the class data to get its current completion status
+      let actualItem;
+      if (snapshotTask.type === 'note') {
+        actualItem = cls.notes.find((n: Note) => n.id === snapshotTask.id);
+      } else if (snapshotTask.type === 'exam') {
+        actualItem = cls.practiceExams.find((e: PracticeExam) => e.id === snapshotTask.id);
+      } else {
+        actualItem = cls.tasks.find((t: Task) => t.id === snapshotTask.id);
+      }
+
+      // Return snapshot task with updated completion status
+      return actualItem ? { ...snapshotTask, completed: actualItem.completed } : snapshotTask;
+    });
+  }, [todayTasksSnapshot.tasks, classes]);
 
   // Calculate progress for each class
   const getClassProgress = (cls: Class) => {
@@ -344,6 +389,16 @@ export default function App() {
   };
 
   const toggleTodayTask = (taskId: string) => {
+    // Find the task in todayTasks before toggling - we need this info to move it to completed
+    const taskBeingToggled = todayTasks.find(t => t.id === taskId);
+
+    // If marking as complete, trigger celebration animation - woohoo!
+    if (taskBeingToggled && !taskBeingToggled.completed) {
+      setCelebratingTaskId(taskId);
+      setTimeout(() => setCelebratingTaskId(null), 400); // matches animation duration
+    }
+
+    // Update the underlying class data
     setClasses((prevClasses) =>
       prevClasses.map((cls) => ({
         ...cls,
@@ -358,6 +413,11 @@ export default function App() {
         ),
       }))
     );
+
+    // If we found the task and it's being marked complete (not already completed), add to completedToday
+    if (taskBeingToggled && !taskBeingToggled.completed) {
+      setCompletedToday(prev => [...prev, taskBeingToggled]);
+    }
   };
 
   const updateClass = (updatedClass: Class) => {
@@ -396,15 +456,42 @@ export default function App() {
         {/* Tasks for Today */}
         <div className="mb-12 sketch-box">
           <h2 className="sketch-heading mb-4">Tasks for Today</h2>
-          {todayTasks.length === 0 ? (
+
+          {/* Rainbow Progress Bar */}
+          {todayTasks.length > 0 && (
+            <div className="mb-6">
+              <div className="sketch-progress-container h-8 mb-2">
+                <div
+                  className="sketch-progress-fill h-full flex items-center justify-center"
+                  style={{
+                    width: `${completedToday.length > 0 ? (completedToday.length / (todayTasks.length + completedToday.length)) * 100 : 0}%`,
+                    background: 'linear-gradient(90deg, hsl(0, 70%, 60%) 0%, hsl(30, 70%, 60%) 20%, hsl(60, 70%, 60%) 35%, hsl(120, 70%, 60%) 50%, hsl(180, 70%, 60%) 65%, hsl(240, 70%, 60%) 80%, hsl(280, 70%, 60%) 90%, hsl(320, 70%, 60%) 100%)',
+                    transition: 'width 0.5s ease'
+                  }}
+                >
+                  {completedToday.length > 0 && (
+                    <span className="sketch-text-small font-bold text-white relative z-10">
+                      {completedToday.length}/{todayTasks.length + completedToday.length}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="sketch-text-small text-center opacity-75">
+                {completedToday.length} of {todayTasks.length + completedToday.length} tasks completed
+              </p>
+            </div>
+          )}
+
+          {/* Active Tasks */}
+          {todayTasks.length === 0 && completedToday.length === 0 ? (
             <p className="sketch-text opacity-60">No tasks due today! 🎉</p>
           ) : (
             <div className="space-y-3">
               {todayTasks.map((task) => (
-                <div key={task.id} className="flex items-start gap-3">
+                <div key={task.id} className="flex items-start gap-3 task-fade-in">
                   <button
                     onClick={() => toggleTodayTask(task.id)}
-                    className="mt-1 sketch-checkbox"
+                    className={`mt-1 sketch-checkbox ${celebratingTaskId === task.id ? 'celebrating' : ''}`}
                     style={{
                       backgroundColor: task.completed ? '#4CAF50' : 'transparent',
                     }}
