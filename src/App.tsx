@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ClassCard } from './components/ClassCard';
 import { TaskList } from './components/TaskList';
 import { ProgressBar } from './components/ProgressBar';
 import { ClassDetailPage } from './components/ClassDetailPage';
 import { ArrowLeft } from 'lucide-react';
+import { parseISO, differenceInDays, startOfDay } from 'date-fns';
 
 interface Note {
   id: string;
@@ -21,7 +22,6 @@ interface Task {
   id: string;
   text: string;
   completed: boolean;
-  dueToday: boolean;
 }
 
 interface Class {
@@ -36,6 +36,98 @@ interface Class {
   examsUrl?: string;
 }
 
+// Helper to parse exam date strings like "Dec 5" into Date objects
+function parseExamDate(dateStr: string): Date {
+  const currentYear = new Date().getFullYear();
+  // Assuming dates are in format "Mon DD" like "Dec 5"
+  const date = new Date(`${dateStr}, ${currentYear}`);
+
+  // If the parsed date is in the past, assume it's for next year
+  if (date < new Date()) {
+    date.setFullYear(currentYear + 1);
+  }
+
+  return date;
+}
+
+// Scheduling algorithm: calculates which tasks should be done today
+function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }> {
+  const today = startOfDay(new Date());
+  const scheduledTasks: Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }> = [];
+
+  classes.forEach((cls) => {
+    const examDate = parseExamDate(cls.examDate);
+    const daysUntilExam = differenceInDays(examDate, today);
+
+    // Filter out past-due exams
+    if (daysUntilExam < 0) {
+      return;
+    }
+
+    // If exam is today or tomorrow, skip scheduling (too late!)
+    if (daysUntilExam <= 1) {
+      return;
+    }
+
+    // Calculate remaining workload (notes = 1, exams = 3)
+    const uncompletedNotes = cls.notes.filter(n => !n.completed);
+    const uncompletedExams = cls.practiceExams.filter(e => !e.completed);
+    const uncompletedTasks = cls.tasks.filter(t => !t.completed);
+
+    const totalWorkload =
+      uncompletedNotes.length * 1 +
+      uncompletedExams.length * 3 +
+      uncompletedTasks.length * 1;
+
+    if (totalWorkload === 0) {
+      return; // nothing to do for this class
+    }
+
+    // Calculate daily workload and round up
+    const dailyWorkload = totalWorkload / daysUntilExam;
+    const tasksToScheduleToday = Math.ceil(dailyWorkload);
+
+    // Collect items in order: notes first (earlier to later), then exams, then tasks
+    // Notes should be done before exams as per requirements
+    const itemsInOrder: Array<{ item: Task | Note | PracticeExam; type: 'task' | 'note' | 'exam'; weight: number }> = [];
+
+    uncompletedNotes.forEach(note => {
+      itemsInOrder.push({ item: note, type: 'note', weight: 1 });
+    });
+
+    uncompletedExams.forEach(exam => {
+      itemsInOrder.push({ item: exam, type: 'exam', weight: 3 });
+    });
+
+    uncompletedTasks.forEach(task => {
+      itemsInOrder.push({ item: task, type: 'task', weight: 1 });
+    });
+
+    // Select first N items based on cumulative weight
+    let remainingWorkload = tasksToScheduleToday;
+    for (const { item, type, weight } of itemsInOrder) {
+      if (remainingWorkload <= 0) break;
+
+      // Convert Note or PracticeExam to Task format for display
+      const taskItem: Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string } = {
+        id: item.id,
+        text: type === 'task' ? (item as Task).text : item.title,
+        completed: item.completed,
+        classId: cls.id,
+        className: cls.name,
+        color: cls.color,
+        type: type,
+        itemTitle: type !== 'task' ? item.title : undefined,
+      };
+
+      scheduledTasks.push(taskItem);
+      remainingWorkload -= weight;
+    }
+  });
+
+  return scheduledTasks;
+}
+
 export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
@@ -48,8 +140,8 @@ export default function App() {
       notesUrl: 'https://q.utoronto.ca/courses/411081/modules',
       examsUrl: 'https://courses.skule.ca/course/ESC101H1#63',
       tasks: [
-        { id: 'c1-1', text: 'Review lecture summaries', completed: false, dueToday: true },
-        { id: 'c1-2', text: 'Practice old exam problems', completed: false, dueToday: true },
+        { id: 'c1-1', text: 'Review lecture summaries', completed: false },
+        { id: 'c1-2', text: 'Practice old exam problems', completed: false },
       ],
       notes: Array.from({ length: 35 }, (_, i) => ({
         id: `c1-n${i + 1}`,
@@ -70,8 +162,8 @@ export default function App() {
       notesUrl: 'https://q.utoronto.ca/courses/411727/modules',
       examsUrl: 'https://courses.skule.ca/api/exam/exams/bulk/20229/PHY180F_2022_FOUNDATIONS%20OF%20PHYSICS_E.pdf',
       tasks: [
-        { id: 'c2-1', text: 'Review key formulas', completed: false, dueToday: false },
-        { id: 'c2-2', text: 'Work through example problems', completed: false, dueToday: true },
+        { id: 'c2-1', text: 'Review key formulas', completed: false },
+        { id: 'c2-2', text: 'Work through example problems', completed: false },
       ],
       notes: Array.from({ length: 40 }, (_, i) => ({
         id: `c2-n${i + 1}`,
@@ -91,8 +183,8 @@ export default function App() {
       notesUrl: 'https://utoronto-my.sharepoint.com/personal/arthurwh_chan_utoronto_ca/_layouts/15/Doc.aspx?sourcedoc={0233b3bd-a7a3-47af-93e1-b7aaee161dc4}&action=view&wd=target%28_Content%20Library%2FLecture%20Notes.one%7C56c400db-6a6c-4795-aaa6-d446a4dec196%2FUnit%201%20Review%20of%20vectors%7Cf88f82fa-7b2f-4c6a-828d-1654b414a48e%2F%29&wdorigin=NavigationUrl',
       examsUrl: 'https://courses.skule.ca/course/ESC103H1#63',
       tasks: [
-        { id: 'c3-1', text: 'Review vector operations', completed: false, dueToday: false },
-        { id: 'c3-2', text: 'Practice unit conversions', completed: false, dueToday: true },
+        { id: 'c3-1', text: 'Review vector operations', completed: false },
+        { id: 'c3-2', text: 'Practice unit conversions', completed: false },
       ],
       notes: Array.from({ length: 25 }, (_, i) => ({
         id: `c3-n${i + 1}`,
@@ -113,8 +205,8 @@ export default function App() {
       color: '#BA68C8',
       examsUrl: 'https://courses.skule.ca/course/MAT194H1#63',
       tasks: [
-        { id: 'c4-1', text: 'Finish remaining problem sets', completed: false, dueToday: true },
-        { id: 'c4-2', text: 'Review derivatives and integrals', completed: false, dueToday: false },
+        { id: 'c4-1', text: 'Finish remaining problem sets', completed: false },
+        { id: 'c4-2', text: 'Review derivatives and integrals', completed: false },
       ],
       notes: [
         { id: 'c4-n1', title: 'Stewart 1.4 + Appendix D (Trig)', completed: false },
@@ -147,9 +239,9 @@ export default function App() {
       color: '#4DB6AC',
       examsUrl: 'https://www.cs.toronto.edu/~guerzhoy/180/',
       tasks: [
-        { id: 'c5-1', text: 'Review Python syntax and concepts', completed: false, dueToday: true },
-        { id: 'c5-2', text: 'Practice coding problems', completed: false, dueToday: false },
-        { id: 'c5-3', text: 'Review data structures', completed: false, dueToday: false },
+        { id: 'c5-1', text: 'Review Python syntax and concepts', completed: false },
+        { id: 'c5-2', text: 'Practice coding problems', completed: false },
+        { id: 'c5-3', text: 'Review data structures', completed: false },
       ],
       notes: [],
       practiceExams: Array.from({ length: 6 }, (_, i) => ({
@@ -166,8 +258,8 @@ export default function App() {
       notesUrl: 'https://courses.skule.ca/course/CIV102H1#66',
       examsUrl: 'https://courses.skule.ca/course/CIV102H1#63',
       tasks: [
-        { id: 'c6-1', text: 'Review structural analysis methods', completed: false, dueToday: false },
-        { id: 'c6-2', text: 'Practice bridge design calculations', completed: false, dueToday: false },
+        { id: 'c6-1', text: 'Review structural analysis methods', completed: false },
+        { id: 'c6-2', text: 'Practice bridge design calculations', completed: false },
       ],
       notes: Array.from({ length: 35 }, (_, i) => ({
         id: `c6-n${i + 1}`,
@@ -204,22 +296,9 @@ export default function App() {
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   }, [classes]);
 
-  // Get today's tasks from all classes
+  // Get today's tasks using the weighted workload scheduling algorithm
   const todayTasks = useMemo(() => {
-    const tasks: Array<Task & { classId: string; className: string; color: string }> = [];
-    classes.forEach((cls) => {
-      cls.tasks.forEach((task) => {
-        if (task.dueToday) {
-          tasks.push({
-            ...task,
-            classId: cls.id,
-            className: cls.name,
-            color: cls.color,
-          });
-        }
-      });
-    });
-    return tasks;
+    return calculateTodayTasks(classes);
   }, [classes]);
 
   // Calculate progress for each class
@@ -238,6 +317,12 @@ export default function App() {
         ...cls,
         tasks: cls.tasks.map((task) =>
           task.id === taskId ? { ...task, completed: !task.completed } : task
+        ),
+        notes: cls.notes.map((note) =>
+          note.id === taskId ? { ...note, completed: !note.completed } : note
+        ),
+        practiceExams: cls.practiceExams.map((exam) =>
+          exam.id === taskId ? { ...exam, completed: !exam.completed } : exam
         ),
       }))
     );

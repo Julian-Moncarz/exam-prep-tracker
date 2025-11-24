@@ -18,7 +18,6 @@ interface Task {
   id: string;
   text: string;
   completed: boolean;
-  dueToday: boolean;
 }
 
 interface ClassData {
@@ -77,15 +76,6 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
     });
   };
 
-  const toggleTaskDueToday = (taskId: string) => {
-    onUpdate({
-      ...classData,
-      tasks: classData.tasks.map((task) =>
-        task.id === taskId ? { ...task, dueToday: !task.dueToday } : task
-      ),
-    });
-  };
-
   const deleteTask = (taskId: string) => {
     onUpdate({
       ...classData,
@@ -99,7 +89,6 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
         id: Date.now().toString(),
         text: newTaskText.trim(),
         completed: false,
-        dueToday: false,
       };
       onUpdate({
         ...classData,
@@ -312,16 +301,6 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
                   >
                     {task.text}
                   </span>
-                  <button
-                    onClick={() => toggleTaskDueToday(task.id)}
-                    className="ml-3 sketch-text opacity-60 hover:opacity-100"
-                    style={{
-                      color: task.dueToday ? classData.color : '#666',
-                      fontWeight: task.dueToday ? 600 : 400,
-                    }}
-                  >
-                    {task.dueToday ? '★ Today' : '☆ Schedule'}
-                  </button>
                 </div>
                 <button
                   onClick={() => deleteTask(task.id)}
