@@ -36,8 +36,9 @@ interface Class {
   examsUrl?: string;
 }
 
-// localStorage key for persisting app data
+// localStorage keys for persisting app data
 const STORAGE_KEY = 'exam-prep-tracker-data';
+const SNAPSHOT_STORAGE_KEY = 'exam-prep-tracker-today-snapshot';
 
 // Default classes data (used when no saved data exists)
 const DEFAULT_CLASSES: Class[] = [
@@ -205,6 +206,41 @@ function saveToLocalStorage(classes: Class[]): void {
   }
 }
 
+// Interface for the daily snapshot stored in localStorage
+interface DailySnapshot {
+  date: string;
+  tasks: any[];
+  completedIds: string[];
+}
+
+// Load today's snapshot from localStorage
+function loadSnapshotFromLocalStorage(): DailySnapshot | null {
+  try {
+    const saved = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+    if (saved) {
+      const snapshot = JSON.parse(saved) as DailySnapshot;
+      const today = startOfDay(new Date()).toISOString();
+
+      // Only return the snapshot if it's for today
+      if (snapshot.date === today) {
+        return snapshot;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load snapshot from localStorage:', error);
+  }
+  return null;
+}
+
+// Save today's snapshot to localStorage
+function saveSnapshotToLocalStorage(snapshot: DailySnapshot): void {
+  try {
+    localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.error('Failed to save snapshot to localStorage:', error);
+  }
+}
+
 // Helper to parse exam date strings like "Dec 5" into Date objects
 function parseExamDate(dateStr: string): Date {
   const currentYear = new Date().getFullYear();
@@ -300,8 +336,6 @@ function calculateTodayTasks(classes: Class[]): Array<Task & { classId: string; 
 export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [classes, setClasses] = useState<Class[]>(loadFromLocalStorage);
-  // Track completed tasks for the current session (resets on app restart)
-  const [completedToday, setCompletedToday] = useState<Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }>>([]);
   const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
 
   // Auto-save to localStorage whenever classes state changes
@@ -332,26 +366,65 @@ export default function App() {
   }, [classes]);
 
   // Get today's tasks using the weighted workload scheduling algorithm
-  // Snapshot approach: lock in the tasks at the start of each day
+  // Snapshot approach: lock in the tasks at the start of each day and persist to localStorage
   const [todayTasksSnapshot, setTodayTasksSnapshot] = useState<{
     date: string;
     tasks: any[];
   }>(() => {
     const today = startOfDay(new Date()).toISOString();
-    return {
-      date: today,
-      tasks: calculateTodayTasks(classes)
-    };
+    const savedSnapshot = loadSnapshotFromLocalStorage();
+
+    if (savedSnapshot && savedSnapshot.date === today) {
+      // Restore from localStorage if it's for today
+      return {
+        date: savedSnapshot.date,
+        tasks: savedSnapshot.tasks
+      };
+    } else {
+      // Calculate fresh tasks for today
+      return {
+        date: today,
+        tasks: calculateTodayTasks(classes)
+      };
+    }
   });
+
+  // Track completed tasks for today (persists across reloads)
+  const [completedToday, setCompletedToday] = useState<Array<Task & { classId: string; className: string; color: string; type: 'task' | 'note' | 'exam'; itemTitle?: string }>>([]);
+
+  // Restore completedToday from localStorage on mount
+  useEffect(() => {
+    const savedSnapshot = loadSnapshotFromLocalStorage();
+    const today = startOfDay(new Date()).toISOString();
+
+    if (savedSnapshot && savedSnapshot.date === today && savedSnapshot.completedIds.length > 0) {
+      // Reconstruct completedToday array from saved IDs
+      const completedIds = new Set(savedSnapshot.completedIds);
+      const restoredCompleted = todayTasksSnapshot.tasks.filter((task: any) => completedIds.has(task.id));
+      setCompletedToday(restoredCompleted);
+    }
+  }, []); // Only run once on mount
+
+  // Save snapshot to localStorage whenever todayTasksSnapshot or completedToday changes
+  useEffect(() => {
+    const snapshot: DailySnapshot = {
+      date: todayTasksSnapshot.date,
+      tasks: todayTasksSnapshot.tasks,
+      completedIds: completedToday.map((task: any) => task.id)
+    };
+    saveSnapshotToLocalStorage(snapshot);
+  }, [todayTasksSnapshot, completedToday]);
 
   // Recalculate todayTasks only when the date changes, not when tasks are completed
   useEffect(() => {
     const today = startOfDay(new Date()).toISOString();
     if (todayTasksSnapshot.date !== today) {
+      // New day - recalculate tasks and clear completedToday
       setTodayTasksSnapshot({
         date: today,
         tasks: calculateTodayTasks(classes)
       });
+      setCompletedToday([]);
     }
   }, [classes, todayTasksSnapshot.date]);
 
