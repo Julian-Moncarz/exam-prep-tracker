@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { ProgressBar } from './ProgressBar';
+import { triggerConfetti } from '../lib/confetti';
 
 interface Note {
   id: string;
@@ -50,6 +51,11 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
   const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const toggleNote = (noteId: string) => {
+    const note = classData.notes.find(n => n.id === noteId);
+    // Fire confetti when marking as complete (not when unchecking)
+    if (note && !note.completed) {
+      triggerConfetti();
+    }
     onUpdate({
       ...classData,
       notes: classData.notes.map((note) =>
@@ -59,6 +65,11 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
   };
 
   const toggleExam = (examId: string) => {
+    const exam = classData.practiceExams.find(e => e.id === examId);
+    // Fire confetti when marking as complete (not when unchecking)
+    if (exam && !exam.completed) {
+      triggerConfetti();
+    }
     onUpdate({
       ...classData,
       practiceExams: classData.practiceExams.map((exam) =>
@@ -68,6 +79,11 @@ export function ClassDetailPage({ classData, onBack, onUpdate }: ClassDetailPage
   };
 
   const toggleTask = (taskId: string) => {
+    const task = classData.tasks.find(t => t.id === taskId);
+    // Fire confetti when marking as complete (not when unchecking)
+    if (task && !task.completed) {
+      triggerConfetti();
+    }
     onUpdate({
       ...classData,
       tasks: classData.tasks.map((task) =>

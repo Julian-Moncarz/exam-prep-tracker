@@ -5,6 +5,7 @@ import { ProgressBar } from './components/ProgressBar';
 import { ClassDetailPage } from './components/ClassDetailPage';
 import { ArrowLeft } from 'lucide-react';
 import { parseISO, differenceInDays, startOfDay } from 'date-fns';
+import { triggerConfetti } from './lib/confetti';
 
 interface Note {
   id: string;
@@ -471,6 +472,7 @@ export default function App() {
     if (taskBeingToggled && !taskBeingToggled.completed) {
       setCelebratingTaskId(taskId);
       setTimeout(() => setCelebratingTaskId(null), 400); // matches animation duration
+      triggerConfetti(); // party time!
     }
 
     // Update the underlying class data
