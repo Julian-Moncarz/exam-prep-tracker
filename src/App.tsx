@@ -76,9 +76,9 @@ const DEFAULT_CLASSES: Class[] = [
       { id: 'c2-1', text: 'Review key formulas', completed: false },
       { id: 'c2-2', text: 'Work through example problems', completed: false },
     ],
-    notes: Array.from({ length: 40 }, (_, i) => ({
+    notes: Array.from({ length: 11 }, (_, i) => ({
       id: `c2-n${i + 1}`,
-      title: `Class ${i + 1}`,
+      title: `Pre Class Vid ${i + 2}`,
       completed: false,
     })),
     practiceExams: [
@@ -185,12 +185,33 @@ const DEFAULT_CLASSES: Class[] = [
   },
 ];
 
+// Migrate data from old formats to new formats
+function migrateData(classes: Class[]): Class[] {
+  return classes.map(cls => {
+    // Migrate PHY180 notes from old "Class X" format to new "Pre Class Vid X" videos
+    if (cls.id === '2' && cls.notes.length > 0) {
+      const firstNote = cls.notes[0];
+      if (firstNote.title.startsWith('Class ')) {
+        return {
+          ...cls,
+          notes: Array.from({ length: 11 }, (_, i) => ({
+            id: `c2-n${i + 1}`,
+            title: `Pre Class Vid ${i + 2}`,
+            completed: false,
+          })),
+        };
+      }
+    }
+    return cls;
+  });
+}
+
 // Load classes from localStorage, or return defaults if none exist
 function loadFromLocalStorage(): Class[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      return migrateData(JSON.parse(saved));
     }
   } catch (error) {
     console.error('Failed to load data from localStorage:', error);
