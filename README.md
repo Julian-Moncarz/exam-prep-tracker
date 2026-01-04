@@ -1,11 +1,4 @@
 
   # Exam Prep Tracker
-
-  This is a code bundle for Exam Prep Tracker. The original project is available at https://www.figma.com/design/cIicm8NoPFnoAlhU2GbHy2/Exam-Prep-Tracker.
-
-  ## Running the code
-
-  Run `npm i` to install the dependencies.
-
-  Run `npm run dev` to start the development server.
+<img width="1706" height="1062" alt="Screenshot 2026-01-03 at 7 23 15 PM" src="https://github.com/user-attachments/assets/c348f66d-e830-4100-8d69-5c9d4d14081e" />
   
